@@ -32,6 +32,14 @@ namespace mry
         public static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, int dwSize, IntPtr lpNumberOfBytesWritten);
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool VirtualProtectEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, IntPtr flNewProtect, out IntPtr lpflOldProtect);
+        [DllImport("kernel32.dll")]
+        static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);
+        [DllImport("kernel32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
+        static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        public static extern IntPtr GetModuleHandle(string lpModuleName);
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
 
 
         public static UIntPtr VirtualQueryEx(IntPtr hProcess, UIntPtr lpAddress,
@@ -208,6 +216,21 @@ namespace mry
         public String getFileName()
         {
             return FileName;
+        }
+
+        public bool InjectDLL(string dllpath)
+        {
+            // searching for the address of LoadLibraryA and storing it in a pointer
+            IntPtr loadLibraryAddr = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+
+            // alocating some memory on the target process - enough to store the name of the dll
+            // and storing its address in a pointer
+            IntPtr allocMemAddress = VirtualAllocEx(procHandle, IntPtr.Zero, (uint)((dllpath.Length + 1) * Marshal.SizeOf(typeof(char))), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+
+            // writing the name of the dll there
+            WriteProcessMemory(procHandle, allocMemAddress, Encoding.Default.GetBytes(dllpath), ((dllpath.Length + 1) * Marshal.SizeOf(typeof(char))), IntPtr.Zero);
+
+            return CreateRemoteThread(procHandle, IntPtr.Zero, 0, loadLibraryAddr, allocMemAddress, 0, IntPtr.Zero) != null;
         }
 
         public Memory memory(long pointer)

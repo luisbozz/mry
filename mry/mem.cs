@@ -324,6 +324,11 @@ namespace mry
             return new AOBScan((uint)pid).AobScanModule2(data, processModule);
         }
 
+        public Pointer AOBScanModule3(string data, ProcessModule processModule, byte[] buffer)
+        {
+            return new AOBScan((uint)pid).AobScanModule3(data, processModule, buffer);
+        }
+
         public class Memory
         {
             long address;
@@ -1941,6 +1946,48 @@ namespace mry
                 }
 
                 ReadProcessMemory(proc.Handle, (ulong)item.BaseAddress, buff, (ulong)item.ModuleMemorySize, 0);
+
+                uint Result = FindPattern(buff, bPattern, mask);
+                bool temp = Result != 0;
+
+                if (temp)
+                {
+                    return (ulong)item.BaseAddress + (ulong)Result;
+                }
+
+                return 0;
+            }
+
+            public Pointer AobScanModule3(string AOB, ProcessModule processModule, byte[] buff)
+            {
+                AOB = AOB.ToLower().Replace("??", "?").Replace("xx", "x");
+                string[] bPatterns = AOB.ToLower().Split(' ');
+                byte[] bPattern = new byte[bPatterns.Length];
+
+                string mask = "";
+                for (int i = 0; i < bPatterns.Length; i++)
+                {
+                    if (bPatterns[i] == "?" || bPatterns[i] == "x")
+                    {
+                        mask += "?";
+                        bPatterns[i] = "00";
+                    }
+                    else
+                    {
+                        mask += "x";
+                    }
+                }
+
+                for (int i = 0; i < bPatterns.Length; i++)
+                {
+                    bPattern[i] = byte.Parse(bPatterns[i], NumberStyles.HexNumber);
+                }
+
+                var item = processModule;
+
+                if (proc.Id == 0) return 0;
+
+                //ReadProcessMemory(proc.Handle, (ulong)item.BaseAddress, buff, (ulong)item.ModuleMemorySize, 0);
 
                 uint Result = FindPattern(buff, bPattern, mask);
                 bool temp = Result != 0;

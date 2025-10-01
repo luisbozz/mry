@@ -326,7 +326,17 @@ namespace mry
 
         public Pointer AOBScanModule3(string data, ProcessModule processModule, byte[] buffer)
         {
-            return new AOBScan((uint)pid).AobScanModule3(data, processModule, buffer);
+            return new AOBScan((uint)pid).AobScanModuleBytes(data, processModule, buffer);
+        }
+
+        public Pointer AOBScanModuleBytes(string data, ProcessModule processModule, byte[] buffer)
+        {
+            return new AOBScan((uint)pid).AobScanModuleBytes(data, processModule, buffer);
+        }
+
+        public ulong AOBScanBytes(string data, long BaseAddress, byte[] buffer)
+        {
+            return new AOBScan((uint)pid).AOBScanBytes(data, BaseAddress, buffer);
         }
 
         public class Memory
@@ -1958,7 +1968,7 @@ namespace mry
                 return 0;
             }
 
-            public Pointer AobScanModule3(string AOB, ProcessModule processModule, byte[] buff)
+            public Pointer AobScanModuleBytes(string AOB, ProcessModule processModule, byte[] buff)
             {
                 AOB = AOB.ToLower().Replace("??", "?").Replace("xx", "x");
                 string[] bPatterns = AOB.ToLower().Split(' ');
@@ -1998,6 +2008,39 @@ namespace mry
                 }
 
                 return 0;
+            }
+
+            public ulong AOBScanBytes(string AOB, long BaseAddress, byte[] buff)
+            {
+                AOB = AOB.ToLower().Replace("??", "?").Replace("xx", "x");
+                string[] array = AOB.ToLower().Split(' ');
+                byte[] array2 = new byte[array.Length];
+                string text = "";
+                for (int i = 0; i < array.Length; i++)
+                {
+                    if (array[i] == "?" || array[i] == "x")
+                    {
+                        text += "?";
+                        array[i] = "00";
+                    }
+                    else
+                    {
+                        text += "x";
+                    }
+                }
+
+                for (int j = 0; j < array.Length; j++)
+                {
+                    array2[j] = byte.Parse(array[j], NumberStyles.HexNumber);
+                }
+
+                uint num = FindPattern(buff, array2, text);
+                if (num != 0)
+                {
+                    return (ulong)((long)BaseAddress + num);
+                }
+
+                return 0uL;
             }
 
             public static uint FindPattern(byte[] bData, byte[] bPattern, string szMask)

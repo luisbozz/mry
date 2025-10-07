@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Security;
 using System.Threading;
 using System.Globalization;
+using System.Numerics;
 
 namespace mry
 {
@@ -446,6 +447,44 @@ namespace mry
                     Unsafe.Write<T>(b, value);
 
                 return WriteProcessMemory(procHandle, (IntPtr)address, buffer, buffer.Length, IntPtr.Zero);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public Vector3 GetVector3(int strideBytes = 0x8, int baseOffset = 0x0)
+            {
+                int offX = baseOffset + (0 * strideBytes);
+                int offY = baseOffset + (1 * strideBytes);
+                int offZ = baseOffset + (2 * strideBytes);
+
+                int maxOffset = Math.Max(offX, Math.Max(offY, offZ));
+                int bytesToRead = maxOffset + sizeof(float);
+
+                byte[] buffer = new byte[bytesToRead];
+
+                bool ok = ReadProcessMemory(procHandle, address, buffer, buffer.Length, IntPtr.Zero);
+                if (!ok)
+                {
+                    return default;
+                }
+
+                float x = BitConverter.ToSingle(buffer, offX);
+                float y = BitConverter.ToSingle(buffer, offY);
+                float z = BitConverter.ToSingle(buffer, offZ);
+                return new Vector3(x, y, z);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool WriteVector3(Vector3 vec, int strideBytes = 0x8, int baseOffset = 0x0)
+            {
+                int offX = baseOffset + (0 * strideBytes);
+                int offY = baseOffset + (1 * strideBytes);
+                int offZ = baseOffset + (2 * strideBytes);
+
+                bool okX = WriteProcessMemory(procHandle, IntPtr.Add((IntPtr)address, offX), BitConverter.GetBytes(vec.X), sizeof(float), IntPtr.Zero);
+                bool okY = WriteProcessMemory(procHandle, IntPtr.Add((IntPtr)address, offY), BitConverter.GetBytes(vec.Y), sizeof(float), IntPtr.Zero);
+                bool okZ = WriteProcessMemory(procHandle, IntPtr.Add((IntPtr)address, offZ), BitConverter.GetBytes(vec.Z), sizeof(float), IntPtr.Zero);
+
+                return okX && okY && okZ;
             }
 
             public string GetString(int size = 255, bool unicode = true)

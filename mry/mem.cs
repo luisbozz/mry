@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Security;
 using System.Threading;
 using System.Globalization;
+using System.Numerics;
 
 namespace mry
 {
@@ -429,6 +430,22 @@ namespace mry
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe T Get<T>() where T : struct
             {
+                // Sonderfall Vector3
+                if (typeof(T) == typeof(Vector3))
+                {
+                    byte[] buff = new byte[20];
+                    ReadProcessMemory(procHandle, address, buff, buff.Length, IntPtr.Zero);
+
+                    fixed (byte* b = buff)
+                    {
+                        float x = *((float*)(b + 0x0));
+                        float y = *((float*)(b + 0x8));
+                        float z = *((float*)(b + 0x10));
+                        object vec = new Vector3(x, y, z);
+                        return (T)vec;
+                    }
+                }
+
                 byte[] buffer = new byte[Unsafe.SizeOf<T>()];
 
                 ReadProcessMemory(procHandle, address, buffer, buffer.Length, IntPtr.Zero);
@@ -440,6 +457,14 @@ namespace mry
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe bool Write<T>(T value) where T : struct
             {
+                if (value is Vector3 vec)
+                {
+                    return
+                        WriteProcessMemory(procHandle, (IntPtr)(address + 0x0), BitConverter.GetBytes(vec.X), 4, IntPtr.Zero) &&
+                        WriteProcessMemory(procHandle, (IntPtr)(address + 0x8), BitConverter.GetBytes(vec.Y), 4, IntPtr.Zero) &&
+                        WriteProcessMemory(procHandle, (IntPtr)(address + 0x10), BitConverter.GetBytes(vec.Z), 4, IntPtr.Zero);
+                }
+
                 byte[] buffer = new byte[Unsafe.SizeOf<T>()];
 
                 fixed (byte* b = buffer)

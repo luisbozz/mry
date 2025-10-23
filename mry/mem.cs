@@ -244,6 +244,36 @@ namespace mry
             return new Memory(address);
         }
 
+        public Memory memory(string address, long offsets)
+        {
+            return new Memory(address, offsets);
+        }
+
+        public Memory memory(string address, int offsets)
+        {
+            return new Memory(address, offsets);
+        }
+
+        public Memory memory(string address, string offsets)
+        {
+            return new Memory(address, offsets);
+        }
+
+        public Memory memory(string address, long[] offsets)
+        {
+            return new Memory(address, offsets);
+        }
+
+        public Memory memory(string address, int[] offsets)
+        {
+            return new Memory(address, offsets);
+        }
+
+        public Memory memory(string address, string[] offsets)
+        {
+            return new Memory(address, offsets);
+        }
+
         public Memory memory(long pointer, long offsets)
         {
             return new Memory(pointer, offsets);
@@ -344,9 +374,106 @@ namespace mry
         {
             long address;
 
+            private static long ParseAddressString(string address)
+            {
+                if (string.IsNullOrWhiteSpace(address))
+                {
+                    throw new ArgumentException("Address string cannot be null or whitespace.", nameof(address));
+                }
+
+                string trimmed = address.Trim();
+                if (trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                {
+                    trimmed = trimmed.Substring(2);
+                }
+
+                return long.Parse(trimmed, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            }
+
             public Memory(string address)
             {
-                this.address = long.Parse(address, System.Globalization.NumberStyles.HexNumber);
+                this.address = ParseAddressString(address);
+            }
+
+            public Memory(string address, long offset)
+            {
+                long absoluteAddress = ParseAddressString(address);
+                byte[] bufferTemp = new byte[16];
+
+                ReadProcessMemory(procHandle, absoluteAddress, bufferTemp, bufferTemp.Length, IntPtr.Zero);
+                this.address = BitConverter.ToInt64(bufferTemp, 0) + offset;
+            }
+
+            public Memory(string address, string offset)
+            {
+                long absoluteAddress = ParseAddressString(address);
+                byte[] bufferTemp = new byte[16];
+
+                ReadProcessMemory(procHandle, absoluteAddress, bufferTemp, bufferTemp.Length, IntPtr.Zero);
+                this.address = BitConverter.ToInt64(bufferTemp, 0) + Convert.ToInt64(offset);
+            }
+
+            public Memory(string address, long[] offsets)
+            {
+                long absoluteAddress = ParseAddressString(address);
+                byte[] bufferTemp = new byte[16];
+
+                ReadProcessMemory(procHandle, absoluteAddress, bufferTemp, bufferTemp.Length, IntPtr.Zero);
+                long temp = BitConverter.ToInt64(bufferTemp, 0);
+
+                for (int i = 0; i < offsets.Length; i++)
+                {
+                    temp += offsets[i];
+                    ReadProcessMemory(procHandle, temp, bufferTemp, bufferTemp.Length, IntPtr.Zero);
+                    if (i < offsets.Length - 1)
+                    {
+                        temp = BitConverter.ToInt64(bufferTemp, 0);
+                    }
+                }
+
+                this.address = temp;
+            }
+
+            public Memory(string address, int[] offsets)
+            {
+                long absoluteAddress = ParseAddressString(address);
+                byte[] bufferTemp = new byte[16];
+
+                ReadProcessMemory(procHandle, absoluteAddress, bufferTemp, bufferTemp.Length, IntPtr.Zero);
+                long temp = BitConverter.ToInt64(bufferTemp, 0);
+
+                for (int i = 0; i < offsets.Length; i++)
+                {
+                    temp += offsets[i];
+                    ReadProcessMemory(procHandle, temp, bufferTemp, bufferTemp.Length, IntPtr.Zero);
+                    if (i < offsets.Length - 1)
+                    {
+                        temp = BitConverter.ToInt64(bufferTemp, 0);
+                    }
+                }
+
+                this.address = temp;
+            }
+
+            public Memory(string address, string[] offsets)
+            {
+                long absoluteAddress = ParseAddressString(address);
+                byte[] bufferTemp = new byte[16];
+
+                ReadProcessMemory(procHandle, absoluteAddress, bufferTemp, bufferTemp.Length, IntPtr.Zero);
+                long temp = BitConverter.ToInt64(bufferTemp, 0);
+
+                for (int i = 0; i < offsets.Length; i++)
+                {
+                    temp += Convert.ToInt64(offsets[i]);
+                    ReadProcessMemory(procHandle, temp, bufferTemp, bufferTemp.Length, IntPtr.Zero);
+                    if (i < offsets.Length - 1)
+                    {
+                        temp = BitConverter.ToInt64(bufferTemp, 0);
+                    }
+                }
+
+                this.address = temp;
             }
 
             public Memory(long pointer)
